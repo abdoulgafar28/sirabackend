@@ -11,11 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
-from pathlib import Path
-
 import dj_database_url
-
-import config
+from pathlib import Path
+from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,10 +23,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-5mkf5romj87vld_nse+(z+$on=be4arzav=!4k9r-9vssl2fjz'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-5mkf5romj87vld_nse+(z+$on=be4arzav=!4k9r-9vssl2fjz')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
 
@@ -59,8 +57,10 @@ ROOT_URLCONF = 'config.urls'
 
 
 # ✅ AJOUTE ÇA POUR LE DEV
-CORS_ALLOW_ALL_ORIGINS = True  # ⚠️ À enlever en production
+#CORS_ALLOW_ALL_ORIGINS = True  # ⚠️ À enlever en production
 # OU plus spécifique :
+
+
 CORS_ALLOWED_ORIGINS = [
     "http://10.0.2.2:8000",
     "http://localhost:8000",
@@ -149,6 +149,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -162,3 +163,4 @@ LIGDICASH_API_TOKEN    = config('LIGDICASH_API_TOKEN',     default='')
 LIGDICASH_CALLBACK_URL = config('LIGDICASH_CALLBACK_URL',  default='')
 LIGDICASH_STORE_NAME   = config('LIGDICASH_STORE_NAME',    default='SIRA Taxi-Moto')
 LIGDICASH_STORE_URL    = config('LIGDICASH_STORE_URL',     default='https://sira.bf')
+
