@@ -19,8 +19,6 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-DATABASE_ENV_URL = config('DATABASE_URL', default='')
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -48,6 +46,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # ✅ AJOUT : Requis pour les fichiers statiques sur Render
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -93,12 +92,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 
+
+
+DATABASE_ENV_URL = config('DATABASE_URL', default='')
 # Configuration dynamique de la base de données
 if os.environ.get('DATABASE_URL'):
     # En production sur Render : lit la variable globale 'DATABASE_URL'
     DATABASES = {
-        
-
         'default': dj_database_url.config(
             default=DATABASE_ENV_URL,
             conn_max_age=600,
@@ -157,6 +157,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 
+# Optionnel mais recommandé pour la compression WhiteNoise sur Render
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -169,4 +172,3 @@ LIGDICASH_API_TOKEN    = config('LIGDICASH_API_TOKEN',     default='')
 LIGDICASH_CALLBACK_URL = config('LIGDICASH_CALLBACK_URL',  default='')
 LIGDICASH_STORE_NAME   = config('LIGDICASH_STORE_NAME',    default='SIRA Taxi-Moto')
 LIGDICASH_STORE_URL    = config('LIGDICASH_STORE_URL',     default='https://sira.bf')
-
