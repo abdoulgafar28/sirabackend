@@ -94,10 +94,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 
+# Configuration de la base de données
 DATABASE_ENV_URL = config('DATABASE_URL', default='')
-# Configuration dynamique de la base de données
-if os.environ.get('DATABASE_URL'):
-    # En production sur Render : lit la variable globale 'DATABASE_URL'
+
+# Si DATABASE_URL est fournie et contient l'identifiant Render 'dpg-'
+if DATABASE_ENV_URL and 'dpg-' in DATABASE_ENV_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_ENV_URL,
@@ -106,7 +107,7 @@ if os.environ.get('DATABASE_URL'):
         )
     }
 else:
-    # En local sur votre PC : lit vos variables d'environnement individuelles
+    # En local (PC) ou solution de secours automatique pour éviter le crash dummy
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -117,7 +118,6 @@ else:
             'PORT': config('DB_PORT', default='5432'),
         }
     }
-
 
 
 # Password validation
