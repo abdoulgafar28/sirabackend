@@ -89,11 +89,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sira_db',
-        'USER': 'sira_user',   # ← vérifie cette valeur
-        'PASSWORD': '28042003',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT'),
     }
 }
 
@@ -146,4 +146,3 @@ LIGDICASH_API_TOKEN    = config('LIGDICASH_API_TOKEN',     default='')
 LIGDICASH_CALLBACK_URL = config('LIGDICASH_CALLBACK_URL',  default='')
 LIGDICASH_STORE_NAME   = config('LIGDICASH_STORE_NAME',    default='SIRA Taxi-Moto')
 LIGDICASH_STORE_URL    = config('LIGDICASH_STORE_URL',     default='https://sira.bf')
-
