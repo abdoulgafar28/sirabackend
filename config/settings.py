@@ -19,6 +19,9 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+DATABASE_ENV_URL = config('DATABASE_URL', default='')
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -94,9 +97,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 if os.environ.get('DATABASE_URL'):
     # En production sur Render : lit la variable globale 'DATABASE_URL'
     DATABASES = {
+        
+
         'default': dj_database_url.config(
-            default=os.environ.get('DATABASE_URL'),
-            conn_max_age=600
+            default=DATABASE_ENV_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
         )
     }
 else:
