@@ -96,11 +96,10 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 
-# Configuration de la base de données
 DATABASE_URL = config('DATABASE_URL', default='')
 
-# Si DATABASE_URL est fournie et contient l'identifiant Render 'dpg-'
-if DATABASE_URL and 'dpg-' in DATABASE_URL:
+if DATABASE_URL:
+    # Render (ou local avec fichier .env contenant DATABASE_URL)
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -109,7 +108,7 @@ if DATABASE_URL and 'dpg-' in DATABASE_URL:
         )
     }
 else:
-    # En local (PC) ou solution de secours automatique pour éviter le crash dummy
+    # En local (PC) par défaut si DATABASE_URL est vide
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
