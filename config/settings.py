@@ -96,10 +96,11 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 
+# Configuration de la base de données
 DATABASE_URL = config('DATABASE_URL', default='')
 
 if DATABASE_URL:
-    # Render (ou local avec fichier .env contenant DATABASE_URL)
+    # 🚀 En Production sur Render (ou local avec DATABASE_URL dans le .env)
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -108,14 +109,17 @@ if DATABASE_URL:
         )
     }
 else:
-    # En local (PC) par défaut si DATABASE_URL est vide
+    # 💻 En local (PC) par défaut si DATABASE_URL n'est pas définie
     DATABASES = {
         'default': {
             'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
-            
+            'NAME': config('DB_NAME', default='sira_db'),
+            'USER': config('DB_USER', default='sira_user'),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
         }
     }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
