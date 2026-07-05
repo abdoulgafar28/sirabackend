@@ -111,12 +111,8 @@ else:
     # En local (PC) par défaut si DATABASE_URL est vide
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': config('DB_NAME', default='sira_db'),
-            'USER': config('DB_USER', default='sira_user'),
-            'PASSWORD': config('DB_PASSWORD', default=''),
-            'HOST': config('DB_HOST', default='localhost'),
-            'PORT': config('DB_PORT', default='5432'),
+            'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
+            
         }
     }
 
