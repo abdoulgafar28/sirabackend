@@ -41,6 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -95,13 +97,13 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Configuration de la base de données
-DATABASE_ENV_URL = config('DATABASE_URL', default='')
+DATABASE_URL = config('DATABASE_URL', default='')
 
 # Si DATABASE_URL est fournie et contient l'identifiant Render 'dpg-'
-if DATABASE_ENV_URL and 'dpg-' in DATABASE_ENV_URL:
+if DATABASE_URL and 'dpg-' in DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
-            default=DATABASE_ENV_URL,
+            default=DATABASE_URL,
             conn_max_age=600,
             conn_health_checks=True,
         )
