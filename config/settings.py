@@ -95,31 +95,22 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 
-
-# Configuration de la base de données
+# 1. On tente de récupérer la variable (du .env en local, ou de Render en prod)
 DATABASE_URL = config('DATABASE_URL', default='')
 
-if DATABASE_URL:
-    # 🚀 En Production sur Render (ou local avec DATABASE_URL dans le .env)
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=DATABASE_URL,
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-else:
-    # 💻 En local (PC) par défaut si DATABASE_URL n'est pas définie
-    DATABASES = {
-        'default': {
-            'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
-            'NAME': config('DB_NAME', default='sira_db'),
-            'USER': config('DB_USER', default='sira_user'),
-            'PASSWORD': config('DB_PASSWORD', default=''),
-            'HOST': config('DB_HOST', default='localhost'),
-            'PORT': config('DB_PORT', default='5432'),
-        }
-    }
+# 2. Si Render nous cache la variable pendant le build, on met une URL de secours 
+# pour tricher et empêcher Django de charger le moteur "dummy"
+if not DATABASE_URL:
+    # Cette fausse URL force Django à utiliser le moteur PostgreSQL au lieu de dummy
+    DATABASE_URL = "postgres://sira_user:28042003@localhost:5432/sira_db"
+
+DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
