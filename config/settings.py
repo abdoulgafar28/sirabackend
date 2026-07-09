@@ -18,12 +18,7 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-env = environ.Env(
-    DEBUG=(bool, False),
-    ALLOWED_HOSTS=(list, []),
-    DATABASE_URL=(str, ''),
-    SECRET_KEY=(str, 'django-insecure-5mkf5romj87vld_nse+(z+$on=be4arzav=!4k9r-9vssl2fjz'),
-)
+
 
 
 
