@@ -31,7 +31,11 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-5mkf5romj87vld_nse+(z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1'
+).split(',')
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -66,11 +70,13 @@ ROOT_URLCONF = 'config.urls'
 # OU plus spécifique :
 
 
-CORS_ALLOWED_ORIGINS = [
-    "http://10.0.2.2:8000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
-]
+# ✅ Lu depuis l'environnement
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:8000,http://127.0.0.1:8000,http://10.0.2.2:8000'
+).split(',')
+
+
 
 TEMPLATES = [
     {
