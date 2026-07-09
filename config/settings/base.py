@@ -5,16 +5,11 @@ from datetime import timedelta
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # ─── SÉCURITÉ ─────────────────────────────────────────────
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-key')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
-
-
-# ─── EMAIL (SendGrid) ────────────────────────────────────
-
-
-
+# ─── EMAIL ────────────────────────────────────────────────
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
@@ -22,7 +17,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'konateabdoul903@gmail.com'
 EMAIL_HOST_PASSWORD = 'wzqa avqr wikr lwkz'
 DEFAULT_FROM_EMAIL = 'konateabdoul903@gmail.com'
-
 
 # ─── APPLICATIONS ─────────────────────────────────────────
 DJANGO_APPS = [
@@ -65,6 +59,7 @@ AUTH_USER_MODEL = 'users.User'
 # ─── MIDDLEWARE ────────────────────────────────────────────
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -78,14 +73,12 @@ ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-
 # LigdiCash
 LIGDICASH_API_KEY      = config('LIGDICASH_API_KEY',      default='')
 LIGDICASH_API_TOKEN    = config('LIGDICASH_API_TOKEN',     default='')
 LIGDICASH_CALLBACK_URL = config('LIGDICASH_CALLBACK_URL',  default='')
 LIGDICASH_STORE_NAME   = config('LIGDICASH_STORE_NAME',    default='SIRA Taxi-Moto')
 LIGDICASH_STORE_URL    = config('LIGDICASH_STORE_URL',     default='https://sira.bf')
-
 
 # ─── CHANNELS ─────────────────────────────────────────────
 CHANNEL_LAYERS = {
@@ -96,8 +89,8 @@ CHANNEL_LAYERS = {
                 config('REDIS_HOST', default='127.0.0.1'),
                 config('REDIS_PORT', default=6379, cast=int),
             )],
-            'capacity':  1500,
-            'expiry':    10,
+            'capacity': 1500,
+            'expiry':   10,
         },
     },
 }
@@ -118,23 +111,23 @@ TEMPLATES = [
     },
 ]
 
-# ─── BASE DE DONNÉES (PostgreSQL classique) ───────────────
+# ─── BASE DE DONNÉES ──────────────────────────────────────
+# ✅ Defaults vides ajoutés — évite le crash quand DB_NAME etc.
+# sont absentes (cas Render où DATABASE_URL est utilisée à la place)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+        'NAME':     config('DB_NAME',     default=''),
+        'USER':     config('DB_USER',     default=''),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST':     config('DB_HOST',     default='localhost'),
+        'PORT':     config('DB_PORT',     default='5432'),
         'OPTIONS': {
             'connect_timeout': 10,
         },
         'CONN_MAX_AGE': 60,
     }
 }
-
-
 
 # ─── JWT ──────────────────────────────────────────────────
 REST_FRAMEWORK = {
@@ -155,34 +148,35 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+    'ACCESS_TOKEN_LIFETIME':  timedelta(hours=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-    'ROTATE_REFRESH_TOKENS': True,
+    'ROTATE_REFRESH_TOKENS':  True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
 }
 
-
 # ─── CORS ─────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000'
+    default='http://localhost:3000,http://localhost:8000'
 ).split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # ─── FICHIERS ─────────────────────────────────────────────
-STATIC_URL = '/static/'
+STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+MEDIA_URL   = '/media/'
+MEDIA_ROOT  = BASE_DIR / 'media'
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ─── LOCALISATION ─────────────────────────────────────────
 LANGUAGE_CODE = 'fr-fr'
-TIME_ZONE = 'Africa/Ouagadougou'
+TIME_ZONE     = 'Africa/Ouagadougou'
 USE_I18N = True
-USE_TZ = True
+USE_TZ   = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
