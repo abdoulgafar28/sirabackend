@@ -11,12 +11,20 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
+import environ
 import dj_database_url
 from pathlib import Path
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+env = environ.Env(
+    DEBUG=(bool, False),
+    ALLOWED_HOSTS=(list, []),
+    DATABASE_URL=(str, ''),
+    SECRET_KEY=(str, 'django-insecure-5mkf5romj87vld_nse+(z+$on=be4arzav=!4k9r-9vssl2fjz'),
+)
 
 
 
@@ -94,23 +102,39 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 
+# Configuration de la base de données
+"""DATABASE_URL = config('DATABASE_URL', default='')
 
-# 1. On tente de récupérer la variable (du .env en local, ou de Render en prod)
-DATABASE_URL = config('DATABASE_URL', default='')
+if DATABASE_URL:
+    # Render (ou local avec fichier .env contenant DATABASE_URL)
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+else:
+    # En local (PC) par défaut si DATABASE_URL est vide
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='sira_db'),
+            'USER': config('DB_USER', default='sira_user'),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
+    }"""
 
-# 2. Si Render nous cache la variable pendant le build, on met une URL de secours 
-# pour tricher et empêcher Django de charger le moteur "dummy"
-if not DATABASE_URL:
-    # Cette fausse URL force Django à utiliser le moteur PostgreSQL au lieu de dummy
-    DATABASE_URL = "postgres://sira_user:28042003@localhost:5432/sira_db"
+
+
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=DATABASE_URL,
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
+    'default': dj_database_url.parse(env('DATABASE_URL'))
 }
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
