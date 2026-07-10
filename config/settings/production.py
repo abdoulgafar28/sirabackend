@@ -7,6 +7,11 @@ from .base import *   # hérite de base.py
 SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = False
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = [
+    'sirabackend-pc8j.onrender.com', 
+    'localhost', 
+    '127.0.0.1'
+]
 
 # Base de données via DATABASE_URL (Render)
 DATABASES = {
