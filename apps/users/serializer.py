@@ -36,7 +36,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'email',  # ✅ AJOUTER ICI
             'phone_number', 'first_name', 'last_name',
             'password', 'confirm_password', 'role',
-            'mobile_money_number', 'mobile_money_operator',
+            #'mobile_money_number', 'mobile_money_operator',
         ]
 
 
