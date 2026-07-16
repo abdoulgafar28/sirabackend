@@ -64,17 +64,28 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 # CONNEXION / OTP
 # ─────────────────────────────────────────────────────────────
 
+import re
+
 def normalize_phone(value: str) -> str:
     """
-    Normalise un numéro burkinabè en retirant l'indicatif +226/00226,
-    pour matcher le format stocké en base (8 chiffres locaux).
+    Normalise un numéro de téléphone en supprimant les espaces,
+    les caractères spéciaux et l'indicatif international (+ ou 00).
+    Retourne uniquement les chiffres.
     """
-    value = value.strip().replace(' ', '')
-    if value.startswith('+226'):
-        return value[4:]
-    if value.startswith('00226'):
-        return value[5:]
+    # Supprimer espaces, tirets, parenthèses
+    value = re.sub(r"[ \-\(\)]", "", value.strip())
+
+    # Supprimer indicatif international (+ ou 00)
+    if value.startswith("+"):
+        value = value[1:]
+    elif value.startswith("00"):
+        value = value[2:]
+
+    # Garder uniquement les chiffres
+    value = re.sub(r"\D", "", value)
+
     return value
+
 
 class OTPRequestSerializer(serializers.Serializer):
     phone_number = serializers.CharField()

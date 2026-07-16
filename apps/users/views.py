@@ -31,6 +31,8 @@ User = get_user_model()
 # ─────────────────────────────────────────────────────────────
 
 
+import re
+
 def normalize_phone(value: str) -> str:
     """
     Normalise un numéro de téléphone en supprimant les espaces,
@@ -50,6 +52,7 @@ def normalize_phone(value: str) -> str:
     value = re.sub(r"\D", "", value)
 
     return value
+
 
 
 def generate_otp_code(length=6) -> str:
