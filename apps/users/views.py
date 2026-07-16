@@ -105,14 +105,18 @@ class RegisterView(APIView):
 # apps/users/views.py
 
 class OTPSendView(APIView):
-    """Génère un code OTP et le renvoie au frontend pour envoi."""
     permission_classes = [AllowAny]
 
     def post(self, request):
         identifier = request.data.get('identifier', '').strip()
         
-        # Chercher l'utilisateur par email ou téléphone
-        from django.db.models import Q
+        if not identifier:
+            return Response(
+                {'success': False, 'errors': {'identifier': 'Identifiant requis.'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # ✅ Chercher par email OU téléphone
         user = User.objects.filter(
             Q(email=identifier) | Q(phone_number=identifier)
         ).first()
@@ -132,19 +136,12 @@ class OTPSendView(APIView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
         
-        # Retourner le code au frontend (pour qu'il l'envoie)
         return Response({
             'success': True,
-            'code': code,  # ← Le frontend va utiliser ce code pour envoyer SMS/Email
+            'code': code,
             'identifier_type': 'email' if user.email == identifier else 'phone',
             'contact': identifier,
         })
-
-
-
-
-
-
 
 """class OTPSendView(APIView):
     
@@ -278,40 +275,25 @@ class LoginView(APIView):
     """
     permission_classes = [AllowAny]
 
-
     def post(self, request):
-        phone    = request.data.get('phone_number', '').strip()
-        identifier = request.data.get('identifier', '').strip()  # email ou phone
+        identifier = request.data.get('identifier', '').strip()  # ← email OU phone
         password = request.data.get('password', '').strip()
 
-        if not phone or not password:
+        if not identifier or not password:
             return Response(
                 {
                     'success': False,
-                    'errors': {'detail': 'Numéro de téléphone et mot de passe obligatoires.'}
+                    'errors': {'detail': 'Identifiant et mot de passe obligatoires.'}
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            user = User.objects.filter(
-                Q(email=identifier) | Q(phone_number=identifier)
-            ).first()
-        except User.DoesNotExist:
-            return Response(
-                {'success': False, 'errors': {'detail': 'Identifiants incorrects.'}},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
+        # ✅ Chercher par email OU téléphone
+        user = User.objects.filter(
+            Q(email=identifier) | Q(phone_number=identifier)
+        ).first()
 
         if not user or not user.check_password(password):
-            return Response(
-                {'success': False, 'errors': {'detail': 'Identifiants incorrects.'}},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-
-        # Vérifier le mot de passe
-        if not user.check_password(password):
             return Response(
                 {'success': False, 'errors': {'detail': 'Identifiants incorrects.'}},
                 status=status.HTTP_401_UNAUTHORIZED
@@ -326,6 +308,8 @@ class LoginView(APIView):
                 },
                 status=status.HTTP_403_FORBIDDEN
             )
+
+    
 
         if user.status == User.Status.SUSPENDED:
             return Response(
@@ -452,3 +436,4 @@ class ChangePasswordView(APIView):
             {'success': True, 'message': "Mot de passe modifié avec succès."},
             status=status.HTTP_200_OK
         )
+

@@ -72,15 +72,20 @@ class OTPRequestSerializer(serializers.Serializer):
 
 
 class OTPVerifySerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
-    code         = serializers.CharField(min_length=6, max_length=6)
-    purpose      = serializers.ChoiceField(choices=OTPVerification.Purpose.choices)
+    identifier = serializers.CharField()  # ← Change 'phone_number' en 'identifier'
+    code       = serializers.CharField(min_length=6, max_length=6)
+    purpose    = serializers.ChoiceField(choices=OTPVerification.Purpose.choices)
 
     def validate(self, attrs):
-        try:
-            user = User.objects.get(phone_number=attrs['phone_number'])
-        except User.DoesNotExist:
-            raise serializers.ValidationError({'phone_number': 'Utilisateur introuvable.'})
+        identifier = attrs.get('identifier')
+        
+        # ✅ Chercher par email OU téléphone
+        user = User.objects.filter(
+            Q(email=identifier) | Q(phone_number=identifier)
+        ).first()
+        
+        if not user:
+            raise serializers.ValidationError({'identifier': 'Utilisateur introuvable.'})
 
         otp = OTPVerification.objects.filter(
             user=user,
