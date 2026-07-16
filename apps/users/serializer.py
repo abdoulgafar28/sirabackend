@@ -64,6 +64,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 # CONNEXION / OTP
 # ─────────────────────────────────────────────────────────────
 
+def normalize_phone(value: str) -> str:
+    """
+    Normalise un numéro burkinabè en retirant l'indicatif +226/00226,
+    pour matcher le format stocké en base (8 chiffres locaux).
+    """
+    value = value.strip().replace(' ', '')
+    if value.startswith('+226'):
+        return value[4:]
+    if value.startswith('00226'):
+        return value[5:]
+    return value
+
 class OTPRequestSerializer(serializers.Serializer):
     phone_number = serializers.CharField()
     purpose      = serializers.ChoiceField(choices=OTPVerification.Purpose.choices)
@@ -81,10 +93,15 @@ class OTPVerifySerializer(serializers.Serializer):
     def validate(self, attrs):
         identifier = attrs.get('identifier')
         purpose    = attrs.get('purpose')
+        
+        # ✅ Normaliser pour supporter +226, 00226, etc.
+        normalized_identifier = normalize_phone(identifier)
 
-        # Chercher par email OU téléphone
+        # ✅ Chercher par email OU téléphone (brut ou normalisé)
         user = User.objects.filter(
-            Q(email=identifier) | Q(phone_number=identifier)
+            Q(email=identifier) |
+            Q(phone_number=identifier) |
+            Q(phone_number=normalized_identifier)
         ).first()
 
         if not user:
@@ -110,7 +127,7 @@ class OTPVerifySerializer(serializers.Serializer):
             raise serializers.ValidationError({'code': 'Code invalide ou expiré.'})
 
         attrs['user'] = user
-        attrs['otp']  = otp
+        attrs['otp']  = otp  
         return attrs
 
 

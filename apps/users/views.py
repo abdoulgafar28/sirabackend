@@ -3,6 +3,7 @@ import string
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+import re
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -28,6 +29,28 @@ User = get_user_model()
 # ─────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────
+
+
+def normalize_phone(value: str) -> str:
+    """
+    Normalise un numéro de téléphone en supprimant les espaces,
+    les caractères spéciaux et l'indicatif international (+ ou 00).
+    Retourne uniquement les chiffres.
+    """
+    # Supprimer espaces, tirets, parenthèses
+    value = re.sub(r"[ \-\(\)]", "", value.strip())
+
+    # Supprimer indicatif international (+ ou 00)
+    if value.startswith("+"):
+        value = value[1:]
+    elif value.startswith("00"):
+        value = value[2:]
+
+    # Garder uniquement les chiffres
+    value = re.sub(r"\D", "", value)
+
+    return value
+
 
 def generate_otp_code(length=6) -> str:
     """Génère un code OTP numérique."""
@@ -109,16 +132,19 @@ class OTPSendView(APIView):
 
     def post(self, request):
         identifier = request.data.get('identifier', '').strip()
-        
+    
         if not identifier:
             return Response(
                 {'success': False, 'errors': {'identifier': 'Identifiant requis.'}},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # ✅ Chercher par email OU téléphone
+        normalized_identifier = normalize_phone(identifier)
+
         user = User.objects.filter(
-            Q(email=identifier) | Q(phone_number=identifier)
+            Q(email=identifier) |
+            Q(phone_number=identifier) |
+            Q(phone_number=normalized_identifier)
         ).first()
         
         if not user:
@@ -276,7 +302,7 @@ class LoginView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        identifier = request.data.get('identifier', '').strip()  # ← email OU phone
+        identifier = request.data.get('identifier', '').strip()
         password = request.data.get('password', '').strip()
 
         if not identifier or not password:
@@ -288,9 +314,14 @@ class LoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # ✅ Chercher par email OU téléphone
+        # ✅ Normaliser l'identifiant (au cas où c'est un téléphone avec indicatif)
+        normalized_identifier = normalize_phone(identifier)
+
+        # ✅ Chercher par email OU téléphone (brut ou normalisé)
         user = User.objects.filter(
-            Q(email=identifier) | Q(phone_number=identifier)
+            Q(email=identifier) |
+            Q(phone_number=identifier) |
+            Q(phone_number=normalized_identifier)
         ).first()
 
         if not user or not user.check_password(password):
@@ -298,6 +329,7 @@ class LoginView(APIView):
                 {'success': False, 'errors': {'detail': 'Identifiants incorrects.'}},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+        # ... reste inchangé
 
         # Vérifier que le compte est actif
         if not user.is_verified:
