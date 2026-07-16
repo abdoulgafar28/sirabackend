@@ -73,20 +73,30 @@ class OTPRequestSerializer(serializers.Serializer):
 
 
 class OTPVerifySerializer(serializers.Serializer):
-    identifier = serializers.CharField()  # ← Change 'phone_number' en 'identifier'
+    identifier = serializers.CharField()
     code       = serializers.CharField(min_length=6, max_length=6)
     purpose    = serializers.ChoiceField(choices=OTPVerification.Purpose.choices)
+    password   = serializers.CharField(write_only=True, required=False)
 
     def validate(self, attrs):
         identifier = attrs.get('identifier')
-        
-        # ✅ Chercher par email OU téléphone
+        purpose    = attrs.get('purpose')
+
+        # Chercher par email OU téléphone
         user = User.objects.filter(
             Q(email=identifier) | Q(phone_number=identifier)
         ).first()
-        
+
         if not user:
             raise serializers.ValidationError({'identifier': 'Utilisateur introuvable.'})
+
+        # ✅ Mot de passe obligatoire pour la connexion
+        if purpose == OTPVerification.Purpose.LOGIN:
+            password = attrs.get('password')
+            if not password:
+                raise serializers.ValidationError({'password': 'Le mot de passe est requis.'})
+            if not user.check_password(password):
+                raise serializers.ValidationError({'password': 'Mot de passe incorrect.'})
 
         otp = OTPVerification.objects.filter(
             user=user,
