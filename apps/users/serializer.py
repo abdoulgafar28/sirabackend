@@ -64,8 +64,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 # CONNEXION / OTP
 # ─────────────────────────────────────────────────────────────
 
-import re
-
 def normalize_phone(value: str) -> str:
     """
     Normalise un numéro de téléphone en supprimant les espaces,
