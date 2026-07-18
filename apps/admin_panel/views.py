@@ -1,3 +1,5 @@
+from cmath import e
+
 from django.shortcuts import render
 
 # Create your views here.
@@ -6,6 +8,8 @@ from django.shortcuts import render
 import logging
 from datetime import date
 from decimal import Decimal
+
+import sys
 
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -1065,6 +1069,7 @@ L'équipe SiRA
             )
         except Exception:
             logger.error(f"[EMAIL ERROR] Échec d'envoi à {user.email} : {e}")
+            print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
 
         SystemLog.objects.create(
             action=SystemLog.ActionType.ADMIN_LOGIN,
