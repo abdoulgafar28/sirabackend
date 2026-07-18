@@ -1064,7 +1064,7 @@ L'équipe SiRA
                 fail_silently=False,
             )
         except Exception:
-            pass  # Fallback silencieux
+            logger.error(f"[EMAIL ERROR] Échec d'envoi à {user.email} : {e}")
 
         SystemLog.objects.create(
             action=SystemLog.ActionType.ADMIN_LOGIN,
