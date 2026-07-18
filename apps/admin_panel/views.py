@@ -1036,7 +1036,7 @@ class AdminForgotPasswordView(APIView):
 
         # Envoyer l'email avec le lien
       
-        reset_link = f"http://localhost:3000/resetpassword?token={reset_token}&email={email}"
+        reset_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/resetpassword?token={reset_token}&email={email}"
         
         subject = "SiRA Admin — Réinitialisation de mot de passe"
         message = f"""
