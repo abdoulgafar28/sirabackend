@@ -9,6 +9,10 @@ import logging
 from datetime import date
 from decimal import Decimal
 
+from django.core.mail import EmailMessage
+from smtplib import SMTPException
+
+
 import sys
 
 from django.db.models import Sum, Count, Q
@@ -1012,6 +1016,20 @@ class AdminForgotPasswordView(APIView):
 
         try:
             user = User.objects.get(email=email, role=User.Role.ADMIN)
+
+            msg = EmailMessage(
+                subject=subject,
+                body=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email],
+                connection=None,  # utilisera le backend par défaut
+            )
+            result = msg.send(fail_silently=False)
+            print(f">>> EMAIL SENT: {result}", file=sys.stderr)
+        except SMTPException as e:
+            print(f"!!! SMTP ERROR: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"!!! UNEXPECTED ERROR: {e}", file=sys.stderr)
         except User.DoesNotExist:
             # Pour des raisons de sécurité, ne pas révéler si l'email existe
             return Response({
