@@ -23,6 +23,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
 
 from apps.admin_panel.models import (
     Company, DeliveryPricingGrid,
@@ -1107,28 +1108,33 @@ class AdminResetPasswordView(APIView):
 
     def post(self, request):
         email = request.data.get('email', '').strip().lower()
-        if not email:
-            return Response({'success': False, 'errors': {'detail': 'Email obligatoire.'}}, status=status.HTTP_400_BAD_REQUEST)
 
+        if not email:
+            return Response(
+                {'success': False, 'errors': {'detail': 'Email obligatoire.'}},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 1. Vérifier si l'utilisateur existe
         try:
             user = User.objects.get(email=email, role=User.Role.ADMIN)
         except User.DoesNotExist:
-            # Pour des raisons de sécurité, on renvoie toujours un succès
+            # Pour des raisons de sécurité, ne pas révéler si l'email existe
             return Response({
                 'success': True,
                 'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
             })
 
-        # Générer un token de réinitialisation
+        # 2. Générer un token de réinitialisation
         from rest_framework_simplejwt.tokens import AccessToken
         reset_token = str(AccessToken.for_user(user))
 
-        # Invalider les anciens tokens de reset
+        # 3. Invalider les anciens tokens de reset
         OTPVerification.objects.filter(
             user=user, purpose='reset', is_used=False
         ).update(is_used=True)
 
-        # Stocker le token (optionnel)
+        # 4. Stocker une trace (optionnel)
         OTPVerification.objects.create(
             user=user,
             code=reset_token[:6],
@@ -1136,13 +1142,27 @@ class AdminResetPasswordView(APIView):
             expires_at=timezone.now() + timedelta(minutes=30),
         )
 
-        # Envoyer l'email avec le lien dynamique
+        # 5. Envoyer l'email avec le lien dynamique
         from django.conf import settings
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         reset_link = f"{frontend_url}/resetpassword?token={reset_token}&email={email}"
 
         subject = "SiRA Admin — Réinitialisation de mot de passe"
-        message = f"Bonjour {user.full_name},\n\nVous avez demandé la réinitialisation de votre mot de passe SiRA Admin.\n\nCliquez sur le lien ci-dessous pour créer un nouveau mot de passe :\n{reset_link}\n\nCe lien expire dans 30 minutes.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.\n\nCordialement,\nL'équipe SiRA"
+        message = f"""
+Bonjour {user.full_name},
+
+Vous avez demandé la réinitialisation de votre mot de passe SiRA Admin.
+
+Cliquez sur le lien ci-dessous pour créer un nouveau mot de passe :
+{reset_link}
+
+Ce lien expire dans 30 minutes.
+
+Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+
+Cordialement,
+L'équipe SiRA
+        """
 
         try:
             send_mail(
@@ -1155,6 +1175,14 @@ class AdminResetPasswordView(APIView):
         except Exception as e:
             import sys
             print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
+
+        # Log
+        SystemLog.objects.create(
+            action=SystemLog.ActionType.ADMIN_LOGIN,
+            performed_by=user,
+            description=f"Demande de réinitialisation de mot de passe : {user.email}",
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
 
         return Response({
             'success': True,
