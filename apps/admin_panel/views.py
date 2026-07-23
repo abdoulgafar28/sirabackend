@@ -1103,62 +1103,60 @@ L'équipe SiRA
 
 
 class AdminResetPasswordView(APIView):
-    """
-    ÉTAPE 2 : Réinitialisation du mot de passe.
-    Vérifie le token et applique le nouveau mot de passe.
-    """
-    permission_classes = []  # Public
+    permission_classes = []
 
     def post(self, request):
-        token = request.data.get('token', '').strip()
         email = request.data.get('email', '').strip().lower()
-        new_password = request.data.get('new_password', '').strip()
-        confirm_password = request.data.get('confirm_password', '').strip()
-
-        if not all([token, email, new_password, confirm_password]):
-            return Response(
-                {'success': False, 'errors': {'detail': 'Tous les champs sont obligatoires.'}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if new_password != confirm_password:
-            return Response(
-                {'success': False, 'errors': {'detail': 'Les mots de passe ne correspondent pas.'}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if len(new_password) < 8:
-            return Response(
-                {'success': False, 'errors': {'detail': 'Mot de passe trop court (min. 8 caractères).'}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Vérifier le token
-        from rest_framework_simplejwt.tokens import AccessToken
-        from rest_framework_simplejwt.exceptions import TokenError
+        if not email:
+            return Response({'success': False, 'errors': {'detail': 'Email obligatoire.'}}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            token_obj = AccessToken(token)
-            user_id = token_obj['user_id']
-            user = User.objects.get(id=user_id, email=email, role=User.Role.ADMIN)
-        except (TokenError, User.DoesNotExist):
-            return Response(
-                {'success': False, 'errors': {'detail': 'Lien invalide ou expiré.'}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            user = User.objects.get(email=email, role=User.Role.ADMIN)
+        except User.DoesNotExist:
+            # Pour des raisons de sécurité, on renvoie toujours un succès
+            return Response({
+                'success': True,
+                'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
+            })
 
-        # Appliquer le nouveau mot de passe
-        user.set_password(new_password)
-        user.save(update_fields=['password'])
+        # Générer un token de réinitialisation
+        from rest_framework_simplejwt.tokens import AccessToken
+        reset_token = str(AccessToken.for_user(user))
 
-        SystemLog.objects.create(
-            action=SystemLog.ActionType.ADMIN_LOGIN,
-            performed_by=user,
-            description=f"Mot de passe réinitialisé : {user.email}",
-            ip_address=request.META.get('REMOTE_ADDR'),
+        # Invalider les anciens tokens de reset
+        OTPVerification.objects.filter(
+            user=user, purpose='reset', is_used=False
+        ).update(is_used=True)
+
+        # Stocker le token (optionnel)
+        OTPVerification.objects.create(
+            user=user,
+            code=reset_token[:6],
+            purpose='reset',
+            expires_at=timezone.now() + timedelta(minutes=30),
         )
+
+        # Envoyer l'email avec le lien dynamique
+        from django.conf import settings
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        reset_link = f"{frontend_url}/resetpassword?token={reset_token}&email={email}"
+
+        subject = "SiRA Admin — Réinitialisation de mot de passe"
+        message = f"Bonjour {user.full_name},\n\nVous avez demandé la réinitialisation de votre mot de passe SiRA Admin.\n\nCliquez sur le lien ci-dessous pour créer un nouveau mot de passe :\n{reset_link}\n\nCe lien expire dans 30 minutes.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.\n\nCordialement,\nL'équipe SiRA"
+
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            import sys
+            print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
 
         return Response({
             'success': True,
-            'message': 'Mot de passe réinitialisé avec succès. Vous pouvez vous connecter.'
+            'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
         })
