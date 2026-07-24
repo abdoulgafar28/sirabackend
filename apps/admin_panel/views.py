@@ -1003,6 +1003,13 @@ class AdminForgotPasswordView(APIView):
     """
     ÉTAPE 1 : Demande de réinitialisation de mot de passe.
     Envoie un lien de réinitialisation par email.
+
+    ⚠️ CORRECTIF APPLIQUÉ :
+    - `subject` et `message` sont maintenant définis AVANT d'être utilisés.
+    - `except User.DoesNotExist` est placé EN PREMIER (avant `except Exception`),
+      sinon il est mort car Exception intercepte tout avant lui.
+    - Chaque branche d'erreur a un `return` explicite : impossible d'atteindre
+      le code utilisant `user` sans qu'il soit garanti défini.
     """
     permission_classes = []  # Public
 
@@ -1015,52 +1022,51 @@ class AdminForgotPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Réponse générique — utilisée pour TOUS les cas "on ne révèle rien"
+        generic_response = Response({
+            'success': True,
+            'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
+        })
+
+        # ── Recherche de l'utilisateur ──
+        # ✅ FIX : User.DoesNotExist AVANT Exception (ordre des except compte en Python)
         try:
             user = User.objects.get(email=email, role=User.Role.ADMIN)
-
-            msg = EmailMessage(
-                subject=subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email],
-                connection=None,  # utilisera le backend par défaut
-            )
-            result = msg.send(fail_silently=False)
-            print(f">>> EMAIL SENT: {result}", file=sys.stderr)
-        except SMTPException as e:
-            print(f"!!! SMTP ERROR: {e}", file=sys.stderr)
-        except Exception as e:
-            print(f"!!! UNEXPECTED ERROR: {e}", file=sys.stderr)
         except User.DoesNotExist:
-            # Pour des raisons de sécurité, ne pas révéler si l'email existe
-            return Response({
-                'success': True,
-                'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
-            })
+            return generic_response
+        except Exception as e:
+            print(f"!!! ERROR looking up user for {email}: {e}", file=sys.stderr)
+            return generic_response
 
-        # Générer un token de réinitialisation SimpleJWT à courte durée
-        from rest_framework_simplejwt.tokens import AccessToken
-        reset_token = str(AccessToken.for_user(user))
-        
-        # Invalider les anciens tokens de reset
-        OTPVerification.objects.filter(
-            user=user,
-            purpose='reset',
-            is_used=False
-        ).update(is_used=True)
+        # ── À partir d'ici, `user` est garanti défini ──
 
-        # Stocker le token
-        OTPVerification.objects.create(
-            user=user,
-            code=reset_token[:6],  # On stocke les 6 premiers caractères comme référence
-            purpose='reset',
-            expires_at=timezone.now() + timedelta(minutes=30),
-        )
+        # Génération du token de reset
+        try:
+            reset_token = str(AccessToken.for_user(user))
+        except Exception as e:
+            print(f"!!! ERROR generating reset token for {user.email}: {e}", file=sys.stderr)
+            return generic_response
 
-        # Envoyer l'email avec le lien
-      
-        reset_link = f"{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/resetpassword?token={reset_token}&email={email}"
-        
+        # Invalider les anciens tokens de reset + stocker le nouveau
+        try:
+            OTPVerification.objects.filter(
+                user=user, purpose='reset', is_used=False
+            ).update(is_used=True)
+
+            OTPVerification.objects.create(
+                user=user,
+                code=reset_token[:6],
+                purpose='reset',
+                expires_at=timezone.now() + timedelta(minutes=30),
+            )
+        except Exception as e:
+            print(f"!!! ERROR storing OTP for {user.email}: {e}", file=sys.stderr)
+            # On continue quand même — l'email peut partir même si le log échoue
+
+        # ── Construction de l'email (subject/message définis AVANT usage) ──
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        reset_link = f"{frontend_url}/resetpassword?token={reset_token}&email={email}"
+
         subject = "SiRA Admin — Réinitialisation de mot de passe"
         message = f"""
 Bonjour {user.full_name},
@@ -1077,7 +1083,8 @@ Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
 Cordialement,
 L'équipe SiRA
         """
-        
+
+        # ── Envoi de l'email ──
         try:
             send_mail(
                 subject=subject,
@@ -1086,21 +1093,25 @@ L'équipe SiRA
                 recipient_list=[user.email],
                 fail_silently=False,
             )
-        except Exception:
-            logger.error(f"[EMAIL ERROR] Échec d'envoi à {user.email} : {e}")
+        except SMTPException as e:
             print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
+            logger.error(f"[EMAIL ERROR] Échec d'envoi à {user.email} : {e}")
+        except Exception as e:
+            print(f"!!! UNEXPECTED EMAIL ERROR for {user.email}: {e}", file=sys.stderr)
+            logger.error(f"[EMAIL ERROR] Échec d'envoi à {user.email} : {e}")
 
-        SystemLog.objects.create(
-            action=SystemLog.ActionType.ADMIN_LOGIN,
-            performed_by=user,
-            description=f"Demande de réinitialisation de mot de passe : {user.email}",
-            ip_address=request.META.get('REMOTE_ADDR'),
-        )
+        # ── Log système ──
+        try:
+            SystemLog.objects.create(
+                action=SystemLog.ActionType.ADMIN_LOGIN,
+                performed_by=user,
+                description=f"Demande de réinitialisation de mot de passe : {user.email}",
+                ip_address=request.META.get('REMOTE_ADDR'),
+            )
+        except Exception as e:
+            print(f"!!! ERROR writing SystemLog: {e}", file=sys.stderr)
 
-        return Response({
-            'success': True,
-            'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
-        })
+        return generic_response
 
 
 
