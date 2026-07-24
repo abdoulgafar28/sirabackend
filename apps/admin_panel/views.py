@@ -1104,7 +1104,7 @@ L'équipe SiRA
 
 
 class AdminResetPasswordView(APIView):
-    permission_classes = []
+     permission_classes = []
 
     def post(self, request):
         email = request.data.get('email', '').strip().lower()
@@ -1115,26 +1115,26 @@ class AdminResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 1. Vérifier si l'utilisateur existe
+        # Vérifier si l'utilisateur existe
         try:
             user = User.objects.get(email=email, role=User.Role.ADMIN)
         except User.DoesNotExist:
-            # Pour des raisons de sécurité, ne pas révéler si l'email existe
+            # Par sécurité, on ne révèle pas que l'email n'existe pas
             return Response({
                 'success': True,
                 'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
             })
 
-        # 2. Générer un token de réinitialisation
+        # À partir d'ici, 'user' est défini
         from rest_framework_simplejwt.tokens import AccessToken
         reset_token = str(AccessToken.for_user(user))
 
-        # 3. Invalider les anciens tokens de reset
+        # Invalider les anciens tokens de reset
         OTPVerification.objects.filter(
             user=user, purpose='reset', is_used=False
         ).update(is_used=True)
 
-        # 4. Stocker une trace (optionnel)
+        # Stocker une trace
         OTPVerification.objects.create(
             user=user,
             code=reset_token[:6],
@@ -1142,7 +1142,7 @@ class AdminResetPasswordView(APIView):
             expires_at=timezone.now() + timedelta(minutes=30),
         )
 
-        # 5. Envoyer l'email avec le lien dynamique
+        # Lien dynamique
         from django.conf import settings
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         reset_link = f"{frontend_url}/resetpassword?token={reset_token}&email={email}"
@@ -1176,7 +1176,6 @@ L'équipe SiRA
             import sys
             print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
 
-        # Log
         SystemLog.objects.create(
             action=SystemLog.ActionType.ADMIN_LOGIN,
             performed_by=user,
