@@ -1103,7 +1103,14 @@ L'équipe SiRA
         })
 
 
+
 class AdminResetPasswordView(APIView):
+    """
+    POST /api/v1/admin/auth/forgot-password/
+    Envoie un lien de réinitialisation de mot de passe par email.
+    ⚠️ CORRECTIF : la logique est restructurée pour qu'il soit
+    IMPOSSIBLE d'atteindre le code utilisant `user` sans qu'il soit défini.
+    """
     permission_classes = []
 
     def post(self, request):
@@ -1115,41 +1122,61 @@ class AdminResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Vérifier si l'utilisateur existe
+        # ── Réponse générique utilisée dans TOUS les cas "utilisateur introuvable" ──
+        # On la définit une seule fois pour ne jamais dupliquer la logique.
+        generic_response = Response({
+            'success': True,
+            'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
+        })
+
+        # ── Recherche de l'utilisateur ──
+        # ✅ FIX PRINCIPAL : le `return` est DANS le except, donc si l'exception
+        # est levée, la fonction s'arrête ici et ne peut jamais atteindre
+        # le code plus bas qui utilise `user`.
         try:
             user = User.objects.get(email=email, role=User.Role.ADMIN)
         except User.DoesNotExist:
-            # Par sécurité, on ne révèle pas que l'email n'existe pas
-            return Response({
-                'success': True,
-                'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
-            })
+            return generic_response
+        except Exception as e:
+            # Filet de sécurité supplémentaire : toute autre erreur inattendue
+            # lors de la recherche ne doit jamais faire planter le endpoint
+            # publiquement (fuite d'info) ni provoquer un 500.
+            print(f"!!! ERROR looking up user for {email}: {e}", file=sys.stderr)
+            return generic_response
 
-        # À partir d'ici, 'user' est défini
-        from rest_framework_simplejwt.tokens import AccessToken
-        reset_token = str(AccessToken.for_user(user))
+        # ── À partir d'ici, `user` est GARANTI défini ──
+        # (Python ne peut pas arriver jusqu'ici si le try a échoué,
+        # car les deux except ci-dessus retournent systématiquement.)
+
+        try:
+            reset_token = str(AccessToken.for_user(user))
+        except Exception as e:
+            print(f"!!! ERROR generating token for {user.email}: {e}", file=sys.stderr)
+            return generic_response
 
         # Invalider les anciens tokens de reset
-        OTPVerification.objects.filter(
-            user=user, purpose='reset', is_used=False
-        ).update(is_used=True)
+        try:
+            OTPVerification.objects.filter(
+                user=user, purpose='reset', is_used=False
+            ).update(is_used=True)
 
-        # Stocker une trace
-        OTPVerification.objects.create(
-            user=user,
-            code=reset_token[:6],
-            purpose='reset',
-            expires_at=timezone.now() + timedelta(minutes=30),
-        )
+            OTPVerification.objects.create(
+                user=user,
+                code=reset_token[:6],
+                purpose='reset',
+                expires_at=timezone.now() + timedelta(minutes=30),
+            )
+        except Exception as e:
+            print(f"!!! ERROR storing OTP for {user.email}: {e}", file=sys.stderr)
+            # On continue quand même — l'email peut partir même si le log échoue
 
         # Lien dynamique
-        from django.conf import settings
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         reset_link = f"{frontend_url}/resetpassword?token={reset_token}&email={email}"
 
         subject = "SiRA Admin — Réinitialisation de mot de passe"
         message = f"""
-Bonjour {user.full_name},
+Bonjour {getattr(user, 'full_name', user.email)},
 
 Vous avez demandé la réinitialisation de votre mot de passe SiRA Admin.
 
@@ -1173,17 +1200,20 @@ L'équipe SiRA
                 fail_silently=False,
             )
         except Exception as e:
-            import sys
             print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
+            # On ne fait pas échouer la requête juste parce que le SMTP a un souci
+            # (l'utilisateur ne doit jamais savoir si l'envoi a réellement marché,
+            # pour raison de sécurité — mais on log côté serveur pour debug)
 
-        SystemLog.objects.create(
-            action=SystemLog.ActionType.ADMIN_LOGIN,
-            performed_by=user,
-            description=f"Demande de réinitialisation de mot de passe : {user.email}",
-            ip_address=request.META.get('REMOTE_ADDR'),
-        )
+        # Log système (optionnel, ne doit jamais faire planter le endpoint)
+        try:
+            SystemLog.objects.create(
+                action=SystemLog.ActionType.ADMIN_LOGIN,
+                performed_by=user,
+                description=f"Demande de réinitialisation de mot de passe : {user.email}",
+                ip_address=request.META.get('REMOTE_ADDR'),
+            )
+        except Exception as e:
+            print(f"!!! ERROR writing SystemLog: {e}", file=sys.stderr)
 
-        return Response({
-            'success': True,
-            'message': 'Si cet email existe, un lien de réinitialisation a été envoyé.'
-        })
+        return generic_response
