@@ -1104,7 +1104,7 @@ L'équipe SiRA
 
 
 class AdminResetPasswordView(APIView):
-     permission_classes = []
+    permission_classes = []
 
     def post(self, request):
         email = request.data.get('email', '').strip().lower()
