@@ -23,6 +23,20 @@ urlpatterns = [
     path('auth/forgot-password/',  views.AdminForgotPasswordView.as_view(),  name='admin-forgot-password'),
     path('auth/reset-password/',   views.AdminResetPasswordView.as_view(),   name='admin-reset-password'),
 
+
+
+
+
+
+
+
+
+
+
+
+
+    path('debug/test-email/', DebugTestEmailView.as_view(), name='debug-test-email'),
+
     
 
 

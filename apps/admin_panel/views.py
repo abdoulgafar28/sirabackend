@@ -1228,3 +1228,83 @@ L'équipe SiRA
             print(f"!!! ERROR writing SystemLog: {e}", file=sys.stderr)
 
         return generic_response
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class DebugTestEmailView(APIView):
+    """
+    GET /api/v1/admin/debug/test-email/
+    Envoie un email de test et retourne le résultat détaillé dans la réponse HTTP,
+    pour diagnostiquer sans accès shell.
+    """
+    permission_classes = []  # ⚠️ Public temporairement — SUPPRIME cette vue après usage
+
+    def get(self, request):
+        import traceback
+        from django.core.mail import send_mail, get_connection
+        from django.conf import settings
+
+        debug_info = {
+            'EMAIL_BACKEND':    getattr(settings, 'EMAIL_BACKEND', 'NON DÉFINI'),
+            'EMAIL_HOST':       getattr(settings, 'EMAIL_HOST', 'NON DÉFINI'),
+            'EMAIL_PORT':       getattr(settings, 'EMAIL_PORT', 'NON DÉFINI'),
+            'EMAIL_USE_TLS':    getattr(settings, 'EMAIL_USE_TLS', 'NON DÉFINI'),
+            'EMAIL_HOST_USER':  getattr(settings, 'EMAIL_HOST_USER', 'NON DÉFINI'),
+            'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', 'NON DÉFINI'),
+            # On ne montre jamais le mot de passe, juste sa longueur pour vérifier qu'il est bien chargé
+            'PASSWORD_LENGTH':  len(getattr(settings, 'EMAIL_HOST_PASSWORD', '') or ''),
+        }
+
+        try:
+            # Test 1 : la connexion SMTP s'ouvre-t-elle ?
+            connection = get_connection()
+            connection.open()
+            debug_info['connection_open'] = 'OK'
+            connection.close()
+        except Exception as e:
+            debug_info['connection_open'] = f'ÉCHEC: {type(e).__name__}: {str(e)}'
+            debug_info['traceback'] = traceback.format_exc()
+            return Response(debug_info, status=500)
+
+        try:
+            # Test 2 : l'envoi réel
+            result = send_mail(
+                subject="Test SiRA — diagnostic SMTP",
+                message="Si tu reçois ceci, le SMTP fonctionne correctement.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.DEFAULT_FROM_EMAIL],  # s'envoie à lui-même
+                fail_silently=False,
+            )
+            debug_info['send_mail_result'] = result
+            debug_info['status'] = 'EMAIL ENVOYÉ SANS ERREUR — vérifie ta boîte'
+        except Exception as e:
+            debug_info['send_mail_result'] = None
+            debug_info['error_type'] = type(e).__name__
+            debug_info['error_message'] = str(e)
+            debug_info['traceback'] = traceback.format_exc()
+            return Response(debug_info, status=500)
+
+        return Response(debug_info, status=200)
