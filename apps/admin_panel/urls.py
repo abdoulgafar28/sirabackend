@@ -2,6 +2,9 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.admin_panel import views
 
+
+from apps.admin_panel.views import DebugTestEmailView
+
 # ── Router automatique ────────────────────────────────────────
 router = DefaultRouter()
 router.register('companies',    views.CompanyViewSet,      basename='admin-companies')
