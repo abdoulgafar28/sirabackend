@@ -15,6 +15,9 @@ from smtplib import SMTPException
 
 import sys
 
+from core.utils import send_email_via_sendgrid
+
+
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from rest_framework import viewsets, status
@@ -22,7 +25,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from django.conf import settings
 
 from apps.admin_panel.models import (
@@ -1083,7 +1086,14 @@ Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
 Cordialement,
 L'équipe SiRA
         """
-
+        
+        # Exemple dans AdminForgotPasswordView
+        send_email_via_sendgrid(
+            to_email=user.email,
+            subject=subject,
+            message=message,
+            # html_message=html_message   # optionnel
+)
         # ── Envoi de l'email ──
         try:
             send_mail(
