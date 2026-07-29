@@ -1088,21 +1088,26 @@ L'équipe SiRA
         """
         
         # Exemple dans AdminForgotPasswordView
-        send_email_via_sendgrid(
-            to_email=user.email,
-            subject=subject,
-            message=message,
-            # html_message=html_message   # optionnel
-)
+        
         # ── Envoi de l'email ──
         try:
-            send_mail(
+            """send_mail(
                 subject=subject,
                 message=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
+            )"""
+
+
+            send_email_via_sendgrid(
+                to_email=user.email,
+                subject=subject,
+                message=message,
+                # html_message=html_message   # optionnel
             )
+
+
         except SMTPException as e:
             print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
             logger.error(f"[EMAIL ERROR] Échec d'envoi à {user.email} : {e}")
