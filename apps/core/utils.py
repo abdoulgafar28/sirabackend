@@ -1,6 +1,11 @@
 import math
 from decimal import Decimal
+import sys
 from rest_framework_simplejwt.tokens import RefreshToken
+
+import os
+import requests
+from django.conf import settings
 
 
 def calculate_haversine_distance(lat1: float, lon1: float,
@@ -129,3 +134,52 @@ def decode_admin_token(token):
             return refresh.payload
         except Exception as e:
             raise e
+
+
+
+
+
+def send_email_via_sendgrid(to_email, subject, message, html_message=None):
+    """Envoie un email via l'API SendGrid (HTTP)."""
+    api_key = os.environ.get('SENDGRID_API_KEY', '')
+    if not api_key:
+        print("!!! SENDGRID_API_KEY manquante", file=sys.stderr)
+        return False
+
+    url = "https://api.sendgrid.com/v3/mail/send"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "personalizations": [{
+            "to": [{"email": to_email}],
+            "subject": subject
+        }],
+        "from": {
+            "email": settings.DEFAULT_FROM_EMAIL,
+            "name": "SiRA Admin"
+        },
+        "content": [{
+            "type": "text/plain",
+            "value": message
+        }]
+    }
+
+    if html_message:
+        payload["content"].append({
+            "type": "text/html",
+            "value": html_message
+        })
+
+    try:
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code == 202:
+            return True
+        else:
+            print(f"!!! SendGrid error {response.status_code}: {response.text}", file=sys.stderr)
+            return False
+    except Exception as e:
+        print(f"!!! SendGrid exception: {e}", file=sys.stderr)
+        return False
