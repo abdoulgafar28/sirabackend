@@ -15,7 +15,7 @@ from smtplib import SMTPException
 
 import sys
 
-from core.utils import send_email_via_sendgrid
+from apps.core.utils import send_email_via_sendgrid
 
 
 from django.db.models import Sum, Count, Q
