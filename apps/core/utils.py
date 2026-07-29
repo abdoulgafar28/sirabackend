@@ -8,6 +8,9 @@ import requests
 from django.conf import settings
 
 
+
+
+
 def calculate_haversine_distance(lat1: float, lon1: float,
                                   lat2: float, lon2: float) -> float:
     """
@@ -139,8 +142,8 @@ def decode_admin_token(token):
 
 
 
+
 def send_email_via_sendgrid(to_email, subject, message, html_message=None):
-    """Envoie un email via l'API SendGrid (HTTP)."""
     api_key = os.environ.get('SENDGRID_API_KEY', '')
     if not api_key:
         print("!!! SENDGRID_API_KEY manquante", file=sys.stderr)
@@ -167,18 +170,13 @@ def send_email_via_sendgrid(to_email, subject, message, html_message=None):
         }]
     }
 
-    if html_message:
-        payload["content"].append({
-            "type": "text/html",
-            "value": html_message
-        })
-
+    print(f">>> SendGrid sending to {to_email}…", file=sys.stderr)
     try:
         response = requests.post(url, json=payload, headers=headers)
+        print(f">>> SendGrid response: {response.status_code} {response.text}", file=sys.stderr)
         if response.status_code == 202:
             return True
         else:
-            print(f"!!! SendGrid error {response.status_code}: {response.text}", file=sys.stderr)
             return False
     except Exception as e:
         print(f"!!! SendGrid exception: {e}", file=sys.stderr)
