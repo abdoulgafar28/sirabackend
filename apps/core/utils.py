@@ -161,7 +161,7 @@ def send_email_via_sendgrid(to_email, subject, message, html_message=None):
             "subject": subject
         }],
         "from": {
-            "email": settings.DEFAULT_FROM_EMAIL,
+            "email": "konateabdoul903@gmail.com",
             "name": "SiRA Admin"
         },
         "content": [{
