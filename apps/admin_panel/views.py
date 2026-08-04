@@ -245,12 +245,18 @@ class AdminLoginView(TokenObtainPairView):
         message = f"Bonjour {user.full_name},\n\nVotre code de connexion SiRA Admin est : {code}\n\nCe code est valable 10 minutes.\n\nCordialement,\nL'équipe SiRA"
 
         try:
-            send_mail(
+            """send_mail(
                 subject=subject,
                 message=message,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
+            )"""
+
+            send_email_via_sendgrid(
+                to_email=user.email,
+                subject=subject,
+                message=message,
             )
         except Exception as e:
             print(f"[EMAIL FALLBACK] Code OTP pour {user.email}: {code}")
