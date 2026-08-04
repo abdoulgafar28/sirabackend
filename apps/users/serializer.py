@@ -1,4 +1,5 @@
 import re
+from attr import attrs
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
@@ -11,6 +12,9 @@ User = get_user_model()
 # ─────────────────────────────────────────────────────────────
 # HELPERS
 # ─────────────────────────────────────────────────────────────
+
+
+
 
 def validate_phone_number(value):
     """Valide un numéro de téléphone burkinabè."""
@@ -38,6 +42,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'password', 'confirm_password', 'role',
             #'mobile_money_number', 'mobile_money_operator',
         ]
+
+
+
+    def validate_mail(self, attrs):
+        email = attrs.get('email')
+        role = attrs.get('role')
+        if email and User.objects.filter(email=email, role=role).exists():
+            raise serializers.ValidationError({
+                'email': f"Un utilisateur avec ce rôle utilise déjà cet email."
+            })
+        return attrs
 
 
     def validate_phone_number(self, value):

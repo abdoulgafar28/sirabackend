@@ -242,7 +242,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number   = models.CharField(max_length=20, unique=True, db_index=True)
     first_name     = models.CharField(max_length=100)
     last_name      = models.CharField(max_length=100)
-    email          = models.EmailField(blank=True, null=True, unique=True, db_index=True)
+    #email          = models.EmailField(blank=True, null=True, unique=True, db_index=True)
+    email = models.EmailField(blank=True, null=True, db_index=True)
     photo          = models.ImageField(upload_to='users/photos/', blank=True, null=True)
     
     role           = models.CharField(max_length=10, choices=Role.choices, default=Role.CLIENT)
@@ -289,6 +290,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         ]
         verbose_name = 'Utilisateur'
         verbose_name_plural = 'Utilisateurs'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['email', 'role'],
+                name='unique_email_per_role'
+            ),
+        ]
 
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.phone_number})"
