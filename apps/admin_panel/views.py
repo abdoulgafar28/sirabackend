@@ -240,9 +240,37 @@ class AdminLoginView(TokenObtainPairView):
             expires_at=timezone.now() + timedelta(minutes=10),
         )
 
-        # Envoyer par email
-        subject = "SiRA Admin — Code de vérification"
+
+
+
+        subject = "🔐 SiRA Admin — Votre code de vérification"
         message = f"Bonjour {user.full_name},\n\nVotre code de connexion SiRA Admin est : {code}\n\nCe code est valable 10 minutes.\n\nCordialement,\nL'équipe SiRA"
+
+            # Version HTML avec emojis
+        html_message = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; background-color: #f9f9f9; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h1 style="color: #1a4731; margin: 0; font-size: 24px;">SiRA Admin 🛵</h1>
+                    <p style="color: #666; font-size: 14px; margin-top: 4px;">Centre de contrôle</p>
+                </div>
+                <div style="background-color: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <p style="color: #333; font-size: 16px; margin-top: 0;">Bonjour <strong>{user.full_name}</strong> 👋,</p>
+                    <p style="color: #555; font-size: 14px;">Votre code de vérification pour vous connecter est :</p>
+                    <div style="background-color: #f0f4f0; padding: 16px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                        <span style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: bold; color: #1a4731; letter-spacing: 6px;">{code}</span>
+                    </div>
+                    <p style="color: #888; font-size: 12px; margin-bottom: 0;">⏳ Ce code est valable <strong>10 minutes</strong>.</p>
+                </div>
+                <div style="text-align: center; margin-top: 24px;">
+                    <p style="color: #aaa; font-size: 11px;">© 2026 SiRA. Tous droits réservés.</p>
+                </div>
+            </div>
+            """
+
+
+
+        # Envoyer par email
+      
 
         try:
             """send_mail(
@@ -257,6 +285,7 @@ class AdminLoginView(TokenObtainPairView):
                 to_email=user.email,
                 subject=subject,
                 message=message,
+                html_message=html_message
             )
         except Exception as e:
             print(f"[EMAIL FALLBACK] Code OTP pour {user.email}: {code}")
@@ -1092,6 +1121,20 @@ Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
 Cordialement,
 L'équipe SiRA
         """
+
+        subject = "🔑 SiRA Admin — Réinitialisation de mot de passe"
+        html_message = f"""
+        <div style="font-family: Arial, sans-serif; ...">
+            <h1 style="color: #1a4731;">SiRA Admin 🔐</h1>
+            <p>Bonjour <strong>{user.full_name}</strong> 👋,</p>
+            <p>Vous avez demandé la réinitialisation de votre mot de passe: {reset_link} </p>
+            <p>Ce lien expire dans 30 minutes.</p>
+
+            <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+
+            <p>Cordialement,<br>L'équipe SiRA</p>
+        </div>
+        """
         
         # Exemple dans AdminForgotPasswordView
         
@@ -1110,7 +1153,7 @@ L'équipe SiRA
                 to_email=user.email,
                 subject=subject,
                 message=message,
-                # html_message=html_message   # optionnel
+                html_message=html_message   # optionnel
             )
 
 
@@ -1206,22 +1249,49 @@ class AdminResetPasswordView(APIView):
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         reset_link = f"{frontend_url}/resetpassword?token={reset_token}&email={email}"
 
-        subject = "SiRA Admin — Réinitialisation de mot de passe"
+
+        subject = "🔑 SiRA Admin — Réinitialisation de mot de passe"
         message = f"""
-Bonjour {getattr(user, 'full_name', user.email)},
+        Bonjour {getattr(user, 'full_name', user.email)},
 
-Vous avez demandé la réinitialisation de votre mot de passe SiRA Admin.
+        Vous avez demandé la réinitialisation de votre mot de passe SiRA Admin.
 
-Cliquez sur le lien ci-dessous pour créer un nouveau mot de passe :
-{reset_link}
+        Cliquez sur le lien ci-dessous pour créer un nouveau mot de passe :
+        {reset_link}
 
-Ce lien expire dans 30 minutes.
+        Ce lien expire dans 30 minutes.
 
-Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+        Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
 
-Cordialement,
-L'équipe SiRA
+        Cordialement,
+        L'équipe SiRA
         """
+
+        html_message = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; background-color: #f9f9f9; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <h1 style="color: #1a4731; margin: 0; font-size: 24px;">SiRA Admin 🔐</h1>
+                    <p style="color: #666; font-size: 14px; margin-top: 4px;">Centre de contrôle</p>
+                </div>
+                <div style="background-color: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <p style="color: #333; font-size: 16px; margin-top: 0;">Bonjour <strong>{getattr(user, 'full_name', user.email)}</strong> 👋,</p>
+                    <p style="color: #555; font-size: 14px;">Vous avez demandé la réinitialisation de votre mot de passe. Cliquez sur le bouton ci-dessous pour en créer un nouveau :</p>
+                    <div style="text-align: center; margin: 24px 0;">
+                        <a href="{reset_link}" style="display: inline-block; padding: 14px 28px; background-color: #1a4731; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">🔒 Réinitialiser mon mot de passe</a>
+                    </div>
+                    <p style="color: #888; font-size: 12px; margin-bottom: 0;">⏳ Ce lien expire dans <strong>30 minutes</strong>.</p>
+                    <p style="color: #aaa; font-size: 11px; margin-top: 12px;">Si vous n'avez pas demandé cette réinitialisation, ignorez simplement cet email.</p>
+                </div>
+                <div style="text-align: center; margin-top: 24px;">
+                    <p style="color: #aaa; font-size: 11px;">© 2026 SiRA. Tous droits réservés.</p>
+                </div>
+            </div>
+            """
+
+
+
+                    
+
 
         try:
             send_mail(
@@ -1230,6 +1300,7 @@ L'équipe SiRA
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[user.email],
                 fail_silently=False,
+                html_message=html_message  # optionnel, pour les clients email HTML
             )
         except Exception as e:
             print(f"!!! SMTP ERROR for {user.email}: {e}", file=sys.stderr)
