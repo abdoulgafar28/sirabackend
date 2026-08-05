@@ -335,14 +335,34 @@ class LoginView(APIView):
         # ... reste inchangé
 
         # Vérifier que le compte est actif
-        if not user.is_verified:
+        """if not user.is_verified:
             return Response(
                 {
                     'success': False,
                     'errors': {'detail': 'Compte non vérifié. Vérifiez votre téléphone.'}
                 },
                 status=status.HTTP_403_FORBIDDEN
+            )"""
+
+        if not user.is_verified:
+            # ✅ Compte non vérifié → envoyer un OTP pour permettre la vérification
+            code = generate_otp_code()
+            OTPVerification.objects.create(
+                user=user,
+                code=code,
+                purpose=OTPVerification.Purpose.LOGIN,
+                expires_at=timezone.now() + timedelta(minutes=10),
             )
+            return Response({
+                'success': True,
+                'needs_verification': True,
+                'code': code,   # le mobile l'enverra via SMS/email
+                'message': f"Un code de vérification a été envoyé à votre { 'téléphone' if identifier.startswith('+') else 'email' }.",
+                'data': {
+                    'identifier': identifier,
+                }
+            })
+        
 
     
 
